@@ -11,6 +11,22 @@ npm run dev
 
 The dev server boots on [http://localhost:5173](http://localhost:5173). Hot module reloading keeps both the Three.js map and the React control panels in sync as you iterate.
 
+### Deploying to GitHub Pages
+
+This repository ships with a GitHub Actions workflow that publishes the built site to GitHub Pages whenever `main` is updated. To deploy:
+
+1. Push your changes to the `main` branch (or merge a pull request).
+2. Visit the **Actions** tab and open the latest _Deploy to GitHub Pages_ workflow run to monitor progress.
+3. Once the `deploy-pages` step succeeds, the published site URL appears in the workflow summary under the GitHub Pages environment.
+
+The workflow sets `PUBLIC_URL` automatically so asset paths resolve correctly on the `https://<user>.github.io/<repo>/` domain. If you need to test a production build locally, run:
+
+```bash
+PUBLIC_URL=/<your-repo-name>/ npm run build
+```
+
+and open the generated `src/dist/index.html` with a static file server.
+
 ## Features
 
 - ⚙️ **Procedural world generation** &mdash; The `World3DMap` component uses a diamond-square heightmap seeded by player input, then layers on rivers, roads, and settlement markers.
