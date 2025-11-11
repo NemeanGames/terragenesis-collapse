@@ -1,0 +1,15 @@
+# Node and React builds
+node_modules/
+build/
+dist/
+
+# Environment and logs
+.env
+.env.local
+*.log
+
+# System files
+.DS_Store
+
+# Coverage outputs
+coverage/
