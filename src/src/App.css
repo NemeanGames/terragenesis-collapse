@@ -1,0 +1,266 @@
+:root {
+  color: #f8fbff;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 320px 1fr 320px;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #1f2937, #0b101a 60%);
+  color: #f0f4ff;
+}
+
+.app-shell__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+  background: rgba(12, 17, 29, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.app-shell__sidebar--left {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.app-shell__sidebar--right {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.app-shell__main {
+  position: relative;
+  overflow: hidden;
+}
+
+.world-3d-map {
+  position: absolute;
+  inset: 0;
+}
+
+.brand {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.brand h1 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.brand p {
+  font-size: 0.75rem;
+  margin: 0;
+  opacity: 0.75;
+}
+
+.panel {
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.1rem 1.2rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.panel__header h2 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panel__subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.66;
+}
+
+.panel__section {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.field__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.field__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.field__input {
+  background: rgba(8, 12, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  color: inherit;
+}
+
+.field__input:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25);
+}
+
+.field__button {
+  background: linear-gradient(135deg, #60a5fa, #4f46e5);
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  color: #f8fbff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.field__button:hover {
+  filter: brightness(1.1);
+}
+
+.field input[type='range'] {
+  width: 100%;
+}
+
+.field__value {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.checkbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.82rem;
+}
+
+.checkbox input {
+  accent-color: #60a5fa;
+}
+
+.info-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.stat-list,
+.settlement-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.stat-list li,
+.settlement-list li button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.settlement-list li button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.4rem 0.2rem;
+  border-radius: 8px;
+  transition: background 160ms ease;
+}
+
+.settlement-list li button:hover,
+.settlement-list li.is-selected button {
+  background: rgba(96, 165, 250, 0.18);
+}
+
+.settlement-list__name {
+  font-weight: 600;
+}
+
+.settlement-list__coords {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.panel__note {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.placeholder {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: rgba(240, 244, 255, 0.75);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+
+@media (max-width: 1200px) {
+  .app-shell {
+    grid-template-columns: 280px 1fr;
+    grid-template-areas:
+      'left left'
+      'map map'
+      'right right';
+  }
+
+  .app-shell__sidebar--left {
+    grid-area: left;
+  }
+
+  .app-shell__main {
+    grid-area: map;
+    min-height: 60vh;
+  }
+
+  .app-shell__sidebar--right {
+    grid-area: right;
+  }
+}
+
+@media (max-width: 780px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'left'
+      'map'
+      'right';
+  }
+
+  .app-shell__sidebar {
+    border: none;
+  }
+
+  .app-shell__main {
+    min-height: 50vh;
+  }
+}
