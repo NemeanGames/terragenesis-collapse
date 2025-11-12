@@ -70,7 +70,7 @@ export interface GameStoreState {
   buildFacility: (facilityId: FacilityId) => void;
   initializeFromStorage: () => void;
   saveToStorage: () => void;
-  setLastTickAt: (timestamp: number) => void;
+  setLastTickAt: (timestamp: number | null) => void;
   togglePause: () => void;
   snapshot: () => GameSnapshot;
   setWorldSeed: (seed: number) => void;
@@ -263,7 +263,14 @@ export const useGameStore = create<GameStoreState>()(
       set({ isSaving: false, lastSavedAt: Date.now() });
     },
     setLastTickAt: (timestamp) => set({ lastTickAt: timestamp }),
-    togglePause: () => set((state) => ({ isPaused: !state.isPaused })),
+    togglePause: () =>
+      set((state) => {
+        const nextPaused = !state.isPaused;
+        return {
+          isPaused: nextPaused,
+          lastTickAt: nextPaused ? null : Date.now()
+        };
+      }),
     snapshot: () => {
       const state = get();
       return {

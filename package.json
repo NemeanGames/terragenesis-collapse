@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "lint": "eslint ."
     "lint": "eslint .",
     "check:pages": "node scripts/checkPages.mjs"
   },
