@@ -14,10 +14,15 @@ import {
 import { buildRivers, buildRiversGroup } from "../world/terrain/rivers";
 import { sampleSeeds } from "../world/terrain/seeds";
 import { buildKnnEdges, mstKruskal, buildRoadsGroup } from "../world/terrain/roads";
+import { analyzeRegion } from "../world/terrain/regions";
+import { worldToAxial, hashAxial } from "../world/hex";
+import { generateRegionPois, deriveRegionGates } from "../world/regions/poi";
+import type { RegionDetail, RegionCategory } from "../state/types";
 
 const SEEDS = 160;
 const MIN_DIST = 24;
 const KNN = 6;
+const URBAN_HEX_SIZE = 18;
 
 function makeEmojiTexture(emoji: string, size = 128) {
   const c = document.createElement("canvas");
@@ -120,13 +125,20 @@ export default function World3DMap() {
   const worldGroupRef = useRef<THREE.Group | null>(null);
   const rafRef = useRef(0);
   const roRef = useRef<ResizeObserver | null>(null);
+  const selectionRef = useRef<{
+    height: Float32Array[];
+    seeds: { x: number; y: number }[];
+    worldSeed: number;
+    openRegion: (detail: RegionDetail) => void;
+  } | null>(null);
 
-  const { worldSeed, elevScale, showRivers, showSprites, showRoads } = useGameStore((state) => ({
+  const { worldSeed, elevScale, showRivers, showSprites, showRoads, openRegion } = useGameStore((state) => ({
     worldSeed: state.worldSeed,
     elevScale: state.elevScale,
     showRivers: state.showRivers,
     showSprites: state.showSprites,
-    showRoads: state.showRoads
+    showRoads: state.showRoads,
+    openRegion: state.openRegion
   }));
 
   const rng = useMemo(() => makeRng(worldSeed >>> 0), [worldSeed]);
@@ -160,6 +172,15 @@ export default function World3DMap() {
   }, [knnEdges, roadsMain, seeds]);
 
   useEffect(() => {
+    selectionRef.current = {
+      height,
+      seeds,
+      worldSeed,
+      openRegion
+    };
+  }, [height, seeds, worldSeed, openRegion]);
+
+  useEffect(() => {
     runSanityTests(height, rivers, sprites, roadsMain, seeds, roadsSide);
   }, [height, rivers, sprites, roadsMain, roadsSide, seeds]);
 
@@ -175,10 +196,6 @@ export default function World3DMap() {
     if ("outputColorSpace" in renderer) {
       (renderer as THREE.WebGLRenderer & { outputColorSpace?: THREE.ColorSpace }).outputColorSpace =
         THREE.SRGBColorSpace;
-    }
-    if ("outputEncoding" in renderer) {
-      (renderer as THREE.WebGLRenderer & { outputEncoding?: THREE.TextureEncoding }).outputEncoding =
-        THREE.sRGBEncoding;
     }
     container.appendChild(renderer.domElement);
 
@@ -210,6 +227,10 @@ export default function World3DMap() {
     let yaw = -0.6;
     let pitch = 0.55;
     let dist = 160;
+    const raycaster = new THREE.Raycaster();
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hit = new THREE.Vector3();
+
     const onDown = (e: PointerEvent) => {
       isDown = true;
       lastX = e.clientX;
@@ -229,10 +250,46 @@ export default function World3DMap() {
     const onWheel = (e: WheelEvent) => {
       dist = clamp(dist + e.deltaY * 0.1, 12, 260);
     };
+    const onDoubleClick = (e: MouseEvent) => {
+      if (!cameraRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(plane, hit)) return;
+      const context = selectionRef.current;
+      if (!context) return;
+      const analysis = analyzeRegion({
+        height: context.height,
+        seeds: context.seeds,
+        worldX: hit.x,
+        worldZ: hit.z
+      });
+      if (!analysis) return;
+      const axial = worldToAxial(hit.x, hit.z, URBAN_HEX_SIZE);
+      const axialHash = hashAxial(axial);
+      const seed = (axialHash ^ (context.worldSeed >>> 0)) >>> 0;
+      const pois = generateRegionPois(seed, analysis.category, axialHash);
+      const gates = deriveRegionGates(analysis.category, hit.x, hit.z, SIZE);
+      const detail: RegionDetail = {
+        axial,
+        category: analysis.category,
+        seed,
+        worldPosition: [hit.x, hit.z],
+        label: `${formatRegionCategory(analysis.category)} (${axial.q},${axial.r})`,
+        metrics: analysis.metrics,
+        gates,
+        pois
+      };
+      context.openRegion(detail);
+    };
     canvas.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointermove", onMove);
     canvas.addEventListener("wheel", onWheel, { passive: true });
+    canvas.addEventListener("dblclick", onDoubleClick);
 
     const ro = new ResizeObserver((entries) => {
       const rect = entries[0].contentRect;
@@ -265,6 +322,7 @@ export default function World3DMap() {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("dblclick", onDoubleClick);
       if (worldGroup) {
         scene.remove(worldGroup);
         worldGroup.traverse(disposeObject);
@@ -314,4 +372,18 @@ export default function World3DMap() {
   }, [height, elevScale, showRivers, showSprites, showRoads, rivers, sprites, worldSeed, roadsMain, roadsSide, seeds]);
 
   return <div ref={mountRef} style={{ width: "100%", height: "100%" }} />;
+}
+
+function formatRegionCategory(category: RegionCategory) {
+  switch (category) {
+    case "urbanCore":
+      return "Urban Core";
+    case "urbanDistrict":
+      return "Urban District";
+    case "rural":
+      return "Rural Frontier";
+    case "wilderness":
+    default:
+      return "Wilderness";
+  }
 }

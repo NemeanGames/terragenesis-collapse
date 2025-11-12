@@ -7,18 +7,34 @@ import ActionsPanel from "./components/ActionsPanel";
 import SurvivorsPanel from "./components/SurvivorsPanel";
 import EventLogPanel from "./components/EventLogPanel";
 import ZombieWorldGame from "./features/zombie/ZombieWorldGame";
+import UrbanOperationsView from "./features/urban/UrbanOperationsView";
+import type { MapView } from "./state/types";
 
 function App() {
-  const { initializeFromStorage, showZombieWorld, toggleZombieWorld } = useGameStore((state) => ({
-    initializeFromStorage: state.initializeFromStorage,
-    showZombieWorld: state.showZombieWorld,
-    toggleZombieWorld: state.toggleZombieWorld
-  }));
+  const { initializeFromStorage, mapView, setMapView, closeRegion, selectedRegion } =
+    useGameStore((state) => ({
+      initializeFromStorage: state.initializeFromStorage,
+      mapView: state.mapView,
+      setMapView: state.setMapView,
+      closeRegion: state.closeRegion,
+      selectedRegion: state.selectedRegion
+    }));
   useEffect(() => {
     initializeFromStorage();
   }, [initializeFromStorage]);
 
   useSimulation();
+
+  const isUrban = mapView === "urban";
+
+  const handleSelectView = (view: MapView) => {
+    if (view === "urban") return;
+    if (mapView === "urban" && view === "terra") {
+      closeRegion();
+      return;
+    }
+    setMapView(view);
+  };
 
   return (
     <div
@@ -51,8 +67,24 @@ function App() {
             Reclaim the zone, balance the habitat, and keep the horde at bay.
           </p>
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
-          <ModeToggle onClick={toggleZombieWorld} active={showZombieWorld} />
+        <div style={{ marginLeft: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
+          {isUrban && (
+            <button
+              onClick={closeRegion}
+              style={{
+                borderRadius: "9999px",
+                border: "1px solid rgba(132,176,255,0.45)",
+                background: "rgba(24,36,64,0.65)",
+                padding: "6px 16px",
+                color: "#c9dbff",
+                fontSize: "0.85rem",
+                fontWeight: 500
+              }}
+            >
+              ← Back to World
+            </button>
+          )}
+          <ModeToggle mapView={mapView} onSelect={handleSelectView} />
           <SaveIndicator />
         </div>
       </header>
@@ -72,7 +104,13 @@ function App() {
           minHeight: 600
         }}
       >
-        {showZombieWorld ? <ZombieWorldGame /> : <World3DMap />}
+        {mapView === "zombie" && <ZombieWorldGame />}
+        {mapView === "terra" && <World3DMap />}
+        {mapView === "urban" && (
+          <UrbanOperationsView
+            key={selectedRegion?.axial ? `${selectedRegion.axial.q},${selectedRegion.axial.r}` : "urban"}
+          />
+        )}
       </section>
 
       <aside style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -119,21 +157,47 @@ function SaveIndicator() {
   );
 }
 
-function ModeToggle({ active, onClick }: { active: boolean; onClick: () => void }) {
+function ModeToggle({ mapView, onSelect }: { mapView: MapView; onSelect: (view: MapView) => void }) {
+  const isZombie = mapView === "zombie";
   return (
-    <button
-      onClick={onClick}
+    <div
       style={{
+        display: "inline-flex",
         borderRadius: "9999px",
         border: "1px solid rgba(132,176,255,0.4)",
-        background: active ? "rgba(46,80,140,0.65)" : "rgba(17,25,40,0.8)",
-        padding: "6px 16px",
-        color: "#9cc9ff",
-        fontSize: "0.85rem"
+        overflow: "hidden",
+        background: "rgba(17,25,40,0.8)"
       }}
     >
-      {active ? "View TerraGenesis" : "View Zombie Ops"}
-    </button>
+      <button
+        onClick={() => onSelect("terra")}
+        style={{
+          padding: "6px 16px",
+          border: "none",
+          background: !isZombie && mapView !== "urban" ? "rgba(46,80,140,0.65)" : "transparent",
+          color: "#9cc9ff",
+          fontSize: "0.85rem",
+          cursor: "pointer",
+          fontWeight: !isZombie && mapView !== "urban" ? 600 : 500
+        }}
+      >
+        TerraGenesis
+      </button>
+      <button
+        onClick={() => onSelect("zombie")}
+        style={{
+          padding: "6px 16px",
+          border: "none",
+          background: isZombie ? "rgba(174,63,102,0.55)" : "transparent",
+          color: "#f3a7c6",
+          fontSize: "0.85rem",
+          cursor: "pointer",
+          fontWeight: isZombie ? 600 : 500
+        }}
+      >
+        Zombie Ops
+      </button>
+    </div>
   );
 }
 
