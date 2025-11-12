@@ -1,15 +1,6 @@
-# Node and React builds
-node_modules/
-build/
-dist/
-
-# Environment and logs
-.env
-.env.local
-*.log
-
-# System files
+node_modules
+.dist
 .DS_Store
-
-# Coverage outputs
-coverage/
+dist
+.vscode
+coverage
