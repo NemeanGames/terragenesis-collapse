@@ -6,12 +6,17 @@ import StatsPanel from "./components/StatsPanel";
 import ActionsPanel from "./components/ActionsPanel";
 import SurvivorsPanel from "./components/SurvivorsPanel";
 import EventLogPanel from "./components/EventLogPanel";
+import ZombieWorldGame from "./features/zombie/ZombieWorldGame";
 
 function App() {
-  const init = useGameStore((s) => s.initializeFromStorage);
+  const { initializeFromStorage, showZombieWorld, toggleZombieWorld } = useGameStore((state) => ({
+    initializeFromStorage: state.initializeFromStorage,
+    showZombieWorld: state.showZombieWorld,
+    toggleZombieWorld: state.toggleZombieWorld
+  }));
   useEffect(() => {
-    init();
-  }, [init]);
+    initializeFromStorage();
+  }, [initializeFromStorage]);
 
   useSimulation();
 
@@ -47,6 +52,7 @@ function App() {
           </p>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
+          <ModeToggle onClick={toggleZombieWorld} active={showZombieWorld} />
           <SaveIndicator />
         </div>
       </header>
@@ -66,7 +72,7 @@ function App() {
           minHeight: 600
         }}
       >
-        <World3DMap />
+        {showZombieWorld ? <ZombieWorldGame /> : <World3DMap />}
       </section>
 
       <aside style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -109,6 +115,24 @@ function SaveIndicator() {
       }}
     >
       {label}
+    </button>
+  );
+}
+
+function ModeToggle({ active, onClick }: { active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        borderRadius: "9999px",
+        border: "1px solid rgba(132,176,255,0.4)",
+        background: active ? "rgba(46,80,140,0.65)" : "rgba(17,25,40,0.8)",
+        padding: "6px 16px",
+        color: "#9cc9ff",
+        fontSize: "0.85rem"
+      }}
+    >
+      {active ? "View TerraGenesis" : "View Zombie Ops"}
     </button>
   );
 }

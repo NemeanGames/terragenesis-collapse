@@ -63,6 +63,11 @@ export interface GameStoreState {
   showRivers: boolean;
   showSprites: boolean;
   showRoads: boolean;
+  showZombieWorld: boolean;
+  zombieSurvivors: number;
+  zombieFood: number;
+  zombieWater: number;
+  zombieHostility: number;
   applyTick: (result: TickComputation) => void;
   queueEvent: (event: GameEvent) => void;
   assignSurvivor: (id: string, role: SurvivorRole) => void;
@@ -77,6 +82,10 @@ export interface GameStoreState {
   setElevScale: (scale: number) => void;
   toggleLayer: (layer: "rivers" | "sprites" | "roads") => void;
   regenerateSeed: () => void;
+  gainZombieResource: (resource: "survivors" | "food" | "water", amount: number) => void;
+  spendZombieResource: (resource: "survivors" | "food" | "water", amount: number) => void;
+  setZombieHostility: (value: number) => void;
+  toggleZombieWorld: () => void;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -105,7 +114,12 @@ function serialize(state: GameStoreState) {
     elevScale: state.elevScale,
     showRivers: state.showRivers,
     showSprites: state.showSprites,
-    showRoads: state.showRoads
+    showRoads: state.showRoads,
+    showZombieWorld: state.showZombieWorld,
+    zombieSurvivors: state.zombieSurvivors,
+    zombieFood: state.zombieFood,
+    zombieWater: state.zombieWater,
+    zombieHostility: state.zombieHostility
   };
   return JSON.stringify(data);
 }
@@ -141,6 +155,11 @@ export const useGameStore = create<GameStoreState>()(
     showRivers: true,
     showSprites: true,
     showRoads: true,
+    showZombieWorld: false,
+    zombieSurvivors: 24,
+    zombieFood: 120,
+    zombieWater: 90,
+    zombieHostility: 32,
     applyTick: (result) => {
       set((state) => {
         const resources = cloneResources(state.resources);
@@ -292,6 +311,30 @@ export const useGameStore = create<GameStoreState>()(
         if (layer === "sprites") return { showSprites: !state.showSprites };
         return { showRoads: !state.showRoads };
       }),
-    regenerateSeed: () => set((state) => ({ worldSeed: state.worldSeed + 1 }))
+    regenerateSeed: () => set((state) => ({ worldSeed: state.worldSeed + 1 })),
+    gainZombieResource: (resource, amount) =>
+      set((state) => {
+        const map = {
+          survivors: "zombieSurvivors",
+          food: "zombieFood",
+          water: "zombieWater"
+        } as const;
+        const key = map[resource];
+        const next = Math.max(0, state[key] + Math.max(0, amount));
+        return { [key]: next } as Pick<GameStoreState, typeof key>;
+      }),
+    spendZombieResource: (resource, amount) =>
+      set((state) => {
+        const map = {
+          survivors: "zombieSurvivors",
+          food: "zombieFood",
+          water: "zombieWater"
+        } as const;
+        const key = map[resource];
+        const next = Math.max(0, state[key] - Math.max(0, amount));
+        return { [key]: next } as Pick<GameStoreState, typeof key>;
+      }),
+    setZombieHostility: (value) => set({ zombieHostility: clamp(value, 0, 100) }),
+    toggleZombieWorld: () => set((state) => ({ showZombieWorld: !state.showZombieWorld }))
   }))
 );
