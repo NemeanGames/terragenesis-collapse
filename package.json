@@ -1,0 +1,15 @@
+{
+  "name": "terragenesis-collapse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Core simulation state and tick processor for TerraGenesis-Collapse.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}
