@@ -81,6 +81,23 @@ https://<your-github-username>.github.io/terragenesis-collapse/
 Replace `<your-github-username>` with the owner of the repository to obtain the
 playable web link.
 
+### Verifying that GitHub Pages is live
+
+Run the helper script after deployment to confirm the site is reachable. Pass
+your published URL explicitly or expose it through the `GITHUB_PAGES_URL`
+environment variable:
+
+```bash
+# using an explicit flag
+npm run check:pages -- --url https://<your-github-username>.github.io/terragenesis-collapse/
+
+# or relying on an environment variable
+GITHUB_PAGES_URL=https://<your-github-username>.github.io/terragenesis-collapse/ npm run check:pages
+```
+
+The script will report a success status code when the site responds, or an
+error after the configured retry attempts if it is still propagating.
+
 ## License
 
 This project is licensed under the MIT License (see `LICENSE` for details).
