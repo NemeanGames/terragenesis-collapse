@@ -9,7 +9,10 @@ import type {
   EnvironmentTargets,
   GameEvent,
   GameSnapshot,
+  MapView,
   Project,
+  RegionDetail,
+  RegionPoiStatus,
   ResourceKey,
   ResourceMap,
   Survivor,
@@ -63,7 +66,8 @@ export interface GameStoreState {
   showRivers: boolean;
   showSprites: boolean;
   showRoads: boolean;
-  showZombieWorld: boolean;
+  mapView: MapView;
+  selectedRegion: RegionDetail | null;
   zombieSurvivors: number;
   zombieFood: number;
   zombieWater: number;
@@ -86,6 +90,10 @@ export interface GameStoreState {
   spendZombieResource: (resource: "survivors" | "food" | "water", amount: number) => void;
   setZombieHostility: (value: number) => void;
   toggleZombieWorld: () => void;
+  setMapView: (view: MapView) => void;
+  openRegion: (detail: RegionDetail) => void;
+  closeRegion: () => void;
+  updateRegionPoiStatus: (poiId: string, status: RegionPoiStatus) => void;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -115,7 +123,8 @@ function serialize(state: GameStoreState) {
     showRivers: state.showRivers,
     showSprites: state.showSprites,
     showRoads: state.showRoads,
-    showZombieWorld: state.showZombieWorld,
+    mapView: state.mapView,
+    selectedRegion: state.selectedRegion,
     zombieSurvivors: state.zombieSurvivors,
     zombieFood: state.zombieFood,
     zombieWater: state.zombieWater,
@@ -155,7 +164,8 @@ export const useGameStore = create<GameStoreState>()(
     showRivers: true,
     showSprites: true,
     showRoads: true,
-    showZombieWorld: false,
+    mapView: "terra" as MapView,
+    selectedRegion: null,
     zombieSurvivors: 24,
     zombieFood: 120,
     zombieWater: 90,
@@ -335,6 +345,44 @@ export const useGameStore = create<GameStoreState>()(
         return { [key]: next } as Pick<GameStoreState, typeof key>;
       }),
     setZombieHostility: (value) => set({ zombieHostility: clamp(value, 0, 100) }),
-    toggleZombieWorld: () => set((state) => ({ showZombieWorld: !state.showZombieWorld }))
+    toggleZombieWorld: () =>
+      set((state) => {
+        const next = state.mapView === "zombie" ? "terra" : "zombie";
+        return {
+          mapView: next,
+          selectedRegion: next === "zombie" ? null : state.selectedRegion
+        };
+      }),
+    setMapView: (view) =>
+      set((state) => {
+        if (view === state.mapView) return state;
+        if (view === "zombie") {
+          return { mapView: "zombie" as MapView, selectedRegion: null };
+        }
+        if (view === "terra") {
+          return { mapView: "terra" as MapView };
+        }
+        return { mapView: view };
+      }),
+    openRegion: (detail) =>
+      set(() => ({
+        selectedRegion: detail,
+        mapView: "urban" as MapView
+      })),
+    closeRegion: () =>
+      set((state) => ({
+        mapView: state.mapView === "urban" ? ("terra" as MapView) : state.mapView,
+        selectedRegion: null
+      })),
+    updateRegionPoiStatus: (poiId, status) =>
+      set((state) => {
+        if (!state.selectedRegion) return state;
+        const pois = state.selectedRegion.pois.map((poi) =>
+          poi.id === poiId ? { ...poi, status } : poi
+        );
+        return {
+          selectedRegion: { ...state.selectedRegion, pois }
+        };
+      })
   }))
 );

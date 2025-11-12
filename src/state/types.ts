@@ -61,3 +61,39 @@ export interface GameSnapshot {
   activeProjects: Project[];
   tickLengthMinutes: number;
 }
+
+export type Axial = { q: number; r: number };
+
+export type MapView = "terra" | "urban" | "zombie";
+
+export type RegionCategory = "wilderness" | "rural" | "urbanCore" | "urbanDistrict";
+
+export type RegionGate = { edge: "N" | "S" | "E" | "W"; t: number; width: number };
+
+export type RegionPoiStatus = "idle" | "assigned" | "completed";
+
+export interface RegionPoi {
+  id: string;
+  name: string;
+  type: string;
+  difficulty: number;
+  status: RegionPoiStatus;
+  description?: string;
+}
+
+export interface RegionDetail {
+  axial: Axial;
+  category: RegionCategory;
+  seed: number;
+  worldPosition: [number, number];
+  label: string;
+  metrics: {
+    elevation: number;
+    slope: number;
+    distanceToSettlement: number;
+    moisture: number;
+    coastal: boolean;
+  };
+  gates: RegionGate[];
+  pois: RegionPoi[];
+}
