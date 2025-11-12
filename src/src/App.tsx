@@ -2,8 +2,11 @@ import './App.css'
 import MapControls from './components/MapControls'
 import InfoPanels from './components/InfoPanels'
 import World3DMap from './components/World3DMap'
+import HexSandbox from './components/HexSandbox'
+import { useGameStore } from './state/useGameStore'
 
 function App() {
+  const mapMode = useGameStore((state) => state.mapMode)
   return (
     <div className="app-shell">
       <aside className="app-shell__sidebar app-shell__sidebar--left">
@@ -14,7 +17,7 @@ function App() {
         <MapControls />
       </aside>
       <main className="app-shell__main">
-        <World3DMap />
+        {mapMode === 'hex' ? <HexSandbox /> : <World3DMap />}
       </main>
       <aside className="app-shell__sidebar app-shell__sidebar--right">
         <InfoPanels />
