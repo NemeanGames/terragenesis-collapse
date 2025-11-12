@@ -143,6 +143,31 @@
   opacity: 0.7;
 }
 
+.toggle-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.toggle-group button {
+  border-radius: 8px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(8, 12, 20, 0.6);
+  color: inherit;
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.toggle-group button:hover {
+  border-color: rgba(96, 165, 250, 0.6);
+}
+
+.toggle-group button.is-active {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.75);
+}
+
 .checkbox-list {
   list-style: none;
   margin: 0;

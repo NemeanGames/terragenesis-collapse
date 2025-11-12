@@ -1,5 +1,5 @@
 import { ChangeEvent } from 'react'
-import { OverlayKey, useGameStore } from '../state/useGameStore'
+import { OverlayKey, useGameStore, MapMode } from '../state/useGameStore'
 
 const overlayLabels: Record<OverlayKey, string> = {
   rivers: 'Rivers',
@@ -17,6 +17,14 @@ const MapControls = () => {
   const setSeaLevel = useGameStore((state) => state.setSeaLevel)
   const overlayVisibility = useGameStore((state) => state.overlayVisibility)
   const toggleOverlay = useGameStore((state) => state.toggleOverlay)
+  const mapMode = useGameStore((state) => state.mapMode)
+  const setMapMode = useGameStore((state) => state.setMapMode)
+
+  const handleMapMode = (mode: MapMode) => () => {
+    if (mapMode !== mode) {
+      setMapMode(mode)
+    }
+  }
 
   const handleSeedChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSeed(event.target.value.trim())
@@ -36,6 +44,25 @@ const MapControls = () => {
         <h2>World Generation</h2>
         <p className="panel__subtitle">Tune the procedural map parameters</p>
       </header>
+      <div className="panel__section">
+        <span className="field__label">Map View</span>
+        <div className="toggle-group">
+          <button
+            type="button"
+            className={mapMode === 'terrain' ? 'is-active' : ''}
+            onClick={handleMapMode('terrain')}
+          >
+            Terrain
+          </button>
+          <button
+            type="button"
+            className={mapMode === 'hex' ? 'is-active' : ''}
+            onClick={handleMapMode('hex')}
+          >
+            Hex Sandbox
+          </button>
+        </div>
+      </div>
       <div className="panel__section">
         <label className="field">
           <span className="field__label">Seed</span>

@@ -1,6 +1,23 @@
 import { create } from 'zustand'
 
 export type OverlayKey = 'rivers' | 'roads' | 'settlements' | 'heightTint'
+export type MapMode = 'terrain' | 'hex'
+
+export interface AxialCoordinate {
+  q: number
+  r: number
+}
+
+export interface HexBaseState extends AxialCoordinate {
+  elevation: number
+  placedAt: number
+}
+
+export interface HexPoiState extends AxialCoordinate {
+  id: string
+  type: string
+  cooldown: number
+}
 
 export interface Settlement {
   id: string
@@ -22,6 +39,11 @@ interface GameState {
   resources: Resources
   settlements: Settlement[]
   selectedSettlementId: string | null
+  mapMode: MapMode
+  hexState: {
+    base: HexBaseState | null
+    pois: Record<string, HexPoiState>
+  }
   setSeed: (seed: string) => void
   setElevationScale: (scale: number) => void
   setSeaLevel: (level: number) => void
@@ -30,6 +52,11 @@ interface GameState {
   setSettlements: (settlements: Settlement[]) => void
   selectSettlement: (id: string | null) => void
   adjustResource: (key: keyof Resources, delta: number) => void
+  setMapMode: (mode: MapMode) => void
+  setHexBase: (base: HexBaseState | null) => void
+  setHexPois: (pois: HexPoiState[]) => void
+  setHexPoiCooldown: (id: string, cooldown: number) => void
+  tickHexPoiCooldowns: (delta: number) => void
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -49,6 +76,11 @@ export const useGameStore = create<GameState>((set) => ({
   },
   settlements: [],
   selectedSettlementId: null,
+  mapMode: 'terrain',
+  hexState: {
+    base: null,
+    pois: {},
+  },
   setSeed: (seed) => set({ seed }),
   setElevationScale: (scale) => set({ elevationScale: scale }),
   setSeaLevel: (level) => set({ seaLevel: level }),
@@ -75,4 +107,59 @@ export const useGameStore = create<GameState>((set) => ({
         [key]: state.resources[key] + delta,
       },
     })),
+  setMapMode: (mode) => set({ mapMode: mode }),
+  setHexBase: (base) =>
+    set((state) => ({
+      hexState: {
+        ...state.hexState,
+        base: base ? { ...base } : null,
+      },
+    })),
+  setHexPois: (pois) =>
+    set((state) => {
+      const next: Record<string, HexPoiState> = {}
+      pois.forEach((poi) => {
+        next[poi.id] = { ...poi }
+      })
+      return {
+        hexState: {
+          ...state.hexState,
+          pois: next,
+        },
+      }
+    }),
+  setHexPoiCooldown: (id, cooldown) =>
+    set((state) => {
+      const poi = state.hexState.pois[id]
+      if (!poi) return state
+      return {
+        hexState: {
+          ...state.hexState,
+          pois: {
+            ...state.hexState.pois,
+            [id]: { ...poi, cooldown },
+          },
+        },
+      }
+    }),
+  tickHexPoiCooldowns: (delta) =>
+    set((state) => {
+      if (delta <= 0) return state
+      let mutated = false
+      const updated: Record<string, HexPoiState> = {}
+      Object.entries(state.hexState.pois).forEach(([id, poi]) => {
+        const nextCooldown = Math.max(0, poi.cooldown - delta)
+        if (nextCooldown !== poi.cooldown) {
+          mutated = true
+        }
+        updated[id] = { ...poi, cooldown: nextCooldown }
+      })
+      if (!mutated) return state
+      return {
+        hexState: {
+          ...state.hexState,
+          pois: updated,
+        },
+      }
+    }),
 }))
