@@ -181,10 +181,25 @@ function ModeToggle({ mapView, onSelect }: { mapView: MapView; onSelect: (view: 
           fontWeight: !isZombie && mapView !== "urban" ? 600 : 500
         }}
       >
-        TerraGenesis
+     
       </button>
-      <button
-        onClick={() => onSelect("zombie")}
+      <
+   
+            <button
+      onClick={() => onSelect("urban")}
+      style={{
+        padding: "6px 16px",
+        border: "none",
+        background: mapView === "urban" ? "rgba(60,130,80,0.5)" : "transparent",
+        color: "#90c47a",
+        fontSize: "0.85rem",
+        cursor: "pointer",
+        fontWeight: mapView === "urban" ? 600 : 500
+      }}
+    >
+      Urban
+    </button>
+onClick={() => onSelect("zombie")}
         style={{
           padding: "6px 16px",
           border: "none",
