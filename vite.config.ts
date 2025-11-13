@@ -5,6 +5,8 @@ export default defineConfig(({ mode }) => {
   const base = mode === "production" ? "/terragenesis-collapse/" : "/";
   return {
     base,
+        define: { __BUILD_ID__: JSON.stringify(process.env.VITE_BUILD_ID || 'dev') },
+
     plugins: [react()],
     build: {
       outDir: "dist",
