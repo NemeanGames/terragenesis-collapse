@@ -2,33 +2,91 @@ import { mergePhysarumWithMST, runPhysarumRoads, type MaskFn } from "./physarum"
 import { hashStr, mulberry32 } from "./seed";
 import type { CityData, CityParams, RoadEdge, WorldConstraints } from "./types";
 
+declare const sampleSlope: ((point: [number, number]) => number) | undefined;
+
+export const dist = (a: [number, number], b: [number, number]) =>
+  Math.hypot(a[0] - b[0], a[1] - b[1]);
+
+export const edgeCost = (a: [number, number], b: [number, number]) => {
+  let d = dist(a, b);
+  if (typeof sampleSlope === "function") {
+    const sA = sampleSlope(a);
+    const sB = sampleSlope(b);
+    d *= 1 + 0.6 * Math.max(sA, sB);
+  }
+  return d;
+};
+
+export function buildMinimumSpanningTree(
+  points: Array<[number, number]>
+): Array<{ a: [number, number]; b: [number, number] }> {
+  if (points.length < 2) return [];
+
+  const parent = points.map((_, index) => index);
+  const find = (i: number): number => {
+    if (parent[i] === i) return i;
+    parent[i] = find(parent[i]);
+    return parent[i];
+  };
+  const unite = (a: number, b: number) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+
+  const edges: Array<{ ia: number; ib: number; cost: number }> = [];
+  for (let i = 0; i < points.length; i++) {
+    for (let j = i + 1; j < points.length; j++) {
+      edges.push({ ia: i, ib: j, cost: edgeCost(points[i], points[j]) });
+    }
+  }
+
+  edges.sort((ea, eb) => {
+    const diff = ea.cost - eb.cost;
+    if (Math.abs(diff) > 1e-9) return diff;
+    if (ea.ia !== eb.ia) return ea.ia - eb.ia;
+    return ea.ib - eb.ib;
+  });
+
+  const result: Array<{ a: [number, number]; b: [number, number] }> = [];
+  for (const { ia, ib } of edges) {
+    if (find(ia) === find(ib)) continue;
+    unite(ia, ib);
+    result.push({ a: points[ia], b: points[ib] });
+    if (result.length === points.length - 1) break;
+  }
+
+  return result;
+}
+
 function buildMask(width: number, height: number, _constraints: WorldConstraints, _openMask: number): MaskFn {
   return (_x, _z) => 1;
 }
 
-function placeholderRoads(seed: number, params: CityParams): Array<{ a: [number, number]; b: [number, number] }> {
+export function buildRoadMst(
+  seed: number,
+  params: CityParams,
+  gatePoints: Array<[number, number]> = []
+): Array<{ a: [number, number]; b: [number, number] }> {
   const rng = mulberry32(seed ^ hashStr("mst"));
-  const edges: Array<{ a: [number, number]; b: [number, number] }> = [];
-  const hubs = Math.max(3, params.mstHubs);
-  const stepX = params.width / hubs;
+  const hubs = Math.max(2, params.mstHubs);
+  const points: Array<[number, number]> = [];
   for (let i = 0; i < hubs; i++) {
-    const ax = stepX * i + rng() * stepX * 0.2;
-    const bx = stepX * (i + 1) + rng() * stepX * 0.2;
-    const ay = rng() * params.height;
-    const by = rng() * params.height;
-    edges.push({ a: [ax, ay], b: [bx, by] });
+    points.push([rng() * params.width, rng() * params.height]);
   }
-  return edges;
+  for (const gate of gatePoints) points.push(gate);
+  return buildMinimumSpanningTree(points);
 }
 
 export function generate(seed: number, params: CityParams, constraints: WorldConstraints): CityData {
   const rng = mulberry32(seed ^ hashStr("city"));
-  const mst = placeholderRoads(seed, params);
   const gates = (constraints.gates ?? []).map((gate) => {
     const x = gate.edge === "W" ? 0 : gate.edge === "E" ? params.width : gate.t * params.width;
     const z = gate.edge === "N" ? 0 : gate.edge === "S" ? params.height : gate.t * params.height;
     return { edge: gate.edge, t: gate.t, x, z, width: gate.width };
   });
+  const gatePoints = gates.map((g) => [g.x, g.z] as [number, number]);
+  const mst = buildRoadMst(seed, params, gatePoints);
 
   let roads: RoadEdge[] = mst.map((edge) => ({ a: edge.a, b: edge.b, width: 6, kind: "arterial" }));
 
