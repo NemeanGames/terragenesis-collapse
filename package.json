@@ -12,6 +12,7 @@
     "check:pages": "node scripts/checkPages.mjs"
   },
   "dependencies": {
+    "murmurhash-js": "^1.0.0",
     "nanoid": "^4.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
