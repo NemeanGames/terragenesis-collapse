@@ -8,6 +8,7 @@ import SurvivorsPanel from "./components/SurvivorsPanel";
 import EventLogPanel from "./components/EventLogPanel";
 import ZombieWorldGame from "./features/zombie/ZombieWorldGame";
 import UrbanOperationsView from "./features/urban/UrbanOperationsView";
+import VersionBadge from "./components/VersionBadge";
 import type { MapView } from "./state/types";
 
 function App() {
