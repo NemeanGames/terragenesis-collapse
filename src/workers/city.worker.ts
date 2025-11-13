@@ -1,9 +1,10 @@
 import { generate } from "../city-core/generate";
-import type { CityParams, WorldConstraints } from "../city-core/types";
+import type { CityData, CityParams, WorldConstraints } from "../city-core/types";
 
 type GenerateMessage = {
   type: "generate";
   reqId: number;
+  cacheKey: string;
   seed: number;
   params: CityParams;
   constraints: WorldConstraints;
@@ -11,14 +12,20 @@ type GenerateMessage = {
 
 type WorkerMessage = GenerateMessage;
 
-let currentReq = 0;
+const cache = new Map<string, CityData>();
 
 self.onmessage = (event: MessageEvent<WorkerMessage>) => {
   const message = event.data;
   if (message.type !== "generate") return;
-  const requestId = ++currentReq;
-  const cityData = generate(message.seed, message.params, message.constraints);
-  if (requestId === currentReq) {
-    postMessage({ reqId: message.reqId, cityData });
+  const { cacheKey, seed, params, constraints, reqId } = message;
+
+  if (cache.has(cacheKey)) {
+    const cityData = cache.get(cacheKey)!;
+    postMessage({ reqId, cityData });
+    return;
   }
+
+  const cityData = generate(seed, params, constraints);
+  cache.set(cacheKey, cityData);
+  postMessage({ reqId, cityData });
 };
