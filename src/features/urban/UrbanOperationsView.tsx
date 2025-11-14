@@ -4,6 +4,8 @@ import { useGameStore } from "../../state/gameState";
 import type { RegionCategory, RegionPoi, RegionPoiStatus } from "../../state/types";
 import { generateCityData } from "./cityScene";
 import { generateCityPlan } from "./cityGen";
+import CellView from "../../components/CellView";
+import { generateCell } from "./cellGenerator";
 
 const CITY_COLORS: Record<RegionCategory, { ground: string; accent: string }> = {
   urbanCore: { ground: "#1b1e27", accent: "#9fb6ff" },
@@ -152,6 +154,20 @@ export default function UrbanOperationsView() {
     }
   }, [region]);
 
+  const densityBand = useMemo<0 | 1 | 2>(() => {
+    if (!region) return 1;
+    switch (region.category) {
+      case "urbanCore":
+        return 2;
+      case "urbanDistrict":
+        return 1;
+      case "rural":
+      case "wilderness":
+      default:
+        return 0;
+    }
+  }, [region]);
+
   const cityData = useMemo(() => {
     if (!region) return null;
     return generateCityData(region.seed, { density });
@@ -161,6 +177,11 @@ export default function UrbanOperationsView() {
     if (!region) return null;
     return generateCityPlan(region.seed);
   }, [region]);
+
+  const cellData = useMemo(() => {
+    if (!region) return null;
+    return generateCell(region.seed, { densityBand, biomeId: region.category });
+  }, [region, densityBand]);
 
   useEffect(() => {
     if (!cityData || !sceneRef.current || !groupRef.current) return;
@@ -265,7 +286,9 @@ export default function UrbanOperationsView() {
         background: "transparent"
       }}
     >
-      <div ref={mountRef} style={{ position: "relative", background: "rgba(8,10,14,0.65)" }} />
+      <div ref={mountRef} style={{ position: "relative", background: "rgba(8,10,14,0.65)" }}>
+        {cellData && <CellView cell={cellData} />}
+      </div>
       <aside
         style={{
           padding: "16px",
