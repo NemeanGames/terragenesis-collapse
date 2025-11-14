@@ -1,0 +1,11 @@
+[
+  {
+    "date": "2024-05-08",
+    "summary": "Integrated Physarum planner for world roads with feature flags and dev tooling.",
+    "details": [
+      "Added shared Physarum data types, simulation, skeleton extraction, and planner modules.",
+      "Extended Zustand store and world renderer with Physarum overlays and toggles.",
+      "Documented planner design and provided vitest coverage for the core solver."
+    ]
+  }
+]

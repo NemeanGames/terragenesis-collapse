@@ -19,6 +19,10 @@ import type {
   SurvivorRole
 } from "./types";
 import type { TickComputation } from "../simulation/tick";
+import type { PhysarumParams, PhysarumPlan } from "../roads/types";
+import { createDefaultPhysarumConfig } from "../config/physarum";
+import type { PhysarumWorldContext } from "../world/terrain/physarumPlanner";
+import { planWorldPhysarum } from "../world/terrain/physarumPlanner";
 
 const STORAGE_KEY = "tg-collapse-save";
 
@@ -46,6 +50,8 @@ const environmentTargets: EnvironmentTargets = {
 
 const baseFacilities = FACILITIES.map((f) => ({ id: f.id, count: f.id === "hab" ? 1 : 0 }));
 
+const defaultPhysarum = createDefaultPhysarumConfig();
+
 export interface GameStoreState {
   resources: ResourceMap;
   environment: EnvironmentState;
@@ -66,6 +72,13 @@ export interface GameStoreState {
   showRivers: boolean;
   showSprites: boolean;
   showRoads: boolean;
+  enablePhysarumWorld: boolean;
+  enablePhysarumCells: boolean;
+  showPhysarumConductance: boolean;
+  showPhysarumSkeleton: boolean;
+  showPhysarumRoads: boolean;
+  physarumParams: PhysarumParams;
+  physarumWorldPlan: PhysarumPlan | null;
   mapView: MapView;
   selectedRegion: RegionDetail | null;
   zombieSurvivors: number;
@@ -85,6 +98,11 @@ export interface GameStoreState {
   setWorldSeed: (seed: number) => void;
   setElevScale: (scale: number) => void;
   toggleLayer: (layer: "rivers" | "sprites" | "roads") => void;
+  togglePhysarumFeature: (feature: "world" | "cells") => void;
+  togglePhysarumOverlay: (overlay: "conductance" | "skeleton" | "roads") => void;
+  setPhysarumParam: <K extends keyof PhysarumParams>(key: K, value: PhysarumParams[K]) => void;
+  runPhysarumWorld: (context: PhysarumWorldContext) => void;
+  clearPhysarumWorld: () => void;
   regenerateSeed: () => void;
   gainZombieResource: (resource: "survivors" | "food" | "water", amount: number) => void;
   spendZombieResource: (resource: "survivors" | "food" | "water", amount: number) => void;
@@ -123,6 +141,12 @@ function serialize(state: GameStoreState) {
     showRivers: state.showRivers,
     showSprites: state.showSprites,
     showRoads: state.showRoads,
+    enablePhysarumWorld: state.enablePhysarumWorld,
+    enablePhysarumCells: state.enablePhysarumCells,
+    showPhysarumConductance: state.showPhysarumConductance,
+    showPhysarumSkeleton: state.showPhysarumSkeleton,
+    showPhysarumRoads: state.showPhysarumRoads,
+    physarumParams: state.physarumParams,
     mapView: state.mapView,
     selectedRegion: state.selectedRegion,
     zombieSurvivors: state.zombieSurvivors,
@@ -164,6 +188,13 @@ export const useGameStore = create<GameStoreState>()(
     showRivers: true,
     showSprites: true,
     showRoads: true,
+    enablePhysarumWorld: defaultPhysarum.enablePhysarumWorld,
+    enablePhysarumCells: defaultPhysarum.enablePhysarumCells,
+    showPhysarumConductance: false,
+    showPhysarumSkeleton: false,
+    showPhysarumRoads: false,
+    physarumParams: { ...defaultPhysarum.params },
+    physarumWorldPlan: null,
     mapView: "terra" as MapView,
     selectedRegion: null,
     zombieSurvivors: 24,
@@ -321,6 +352,37 @@ export const useGameStore = create<GameStoreState>()(
         if (layer === "sprites") return { showSprites: !state.showSprites };
         return { showRoads: !state.showRoads };
       }),
+    togglePhysarumFeature: (feature) =>
+      set((state) => {
+        if (feature === "world") {
+          const next = !state.enablePhysarumWorld;
+          if (!next) {
+            return { enablePhysarumWorld: next, physarumWorldPlan: null };
+          }
+          return { enablePhysarumWorld: next };
+        }
+        return { enablePhysarumCells: !state.enablePhysarumCells };
+      }),
+    togglePhysarumOverlay: (overlay) =>
+      set((state) => {
+        if (overlay === "conductance") {
+          return { showPhysarumConductance: !state.showPhysarumConductance };
+        }
+        if (overlay === "skeleton") {
+          return { showPhysarumSkeleton: !state.showPhysarumSkeleton };
+        }
+        return { showPhysarumRoads: !state.showPhysarumRoads };
+      }),
+    setPhysarumParam: (key, value) =>
+      set((state) => ({
+        physarumParams: { ...state.physarumParams, [key]: value }
+      })),
+    runPhysarumWorld: (context) =>
+      set((state) => {
+        const plan = planWorldPhysarum(context, state.physarumParams);
+        return { physarumWorldPlan: plan };
+      }),
+    clearPhysarumWorld: () => set({ physarumWorldPlan: null }),
     regenerateSeed: () => set((state) => ({ worldSeed: state.worldSeed + 1 })),
     gainZombieResource: (resource, amount) =>
       set((state) => {

@@ -18,6 +18,7 @@ import { analyzeRegion } from "../world/terrain/regions";
 import { worldToAxial, hashAxial } from "../world/hex";
 import { generateRegionPois, deriveRegionGates } from "../world/regions/poi";
 import type { RegionDetail, RegionCategory } from "../state/types";
+import type { PhysarumPlan } from "../roads/types";
 
 const SEEDS = 160;
 const MIN_DIST = 24;
@@ -53,6 +54,84 @@ function buildSpritesGroup(
     group.add(spr);
   }
   return group;
+}
+
+function buildConductanceOverlay(plan: PhysarumPlan, height: Float32Array[], scaleY: number) {
+  const width = plan.field.width;
+  const heightCells = plan.field.height;
+  if (width < 2 || heightCells < 2) return null;
+  let maxValue = 0;
+  for (const value of plan.field.data) {
+    if (value > maxValue) maxValue = value;
+  }
+  if (maxValue <= 0) return null;
+  const geometry = new THREE.PlaneGeometry(SIZE, SIZE, width - 1, heightCells - 1);
+  const positions = geometry.attributes.position as THREE.BufferAttribute;
+  const colors = new Float32Array(width * heightCells * 3);
+  const color = new THREE.Color();
+  let colorIndex = 0;
+  const stepX = SIZE / (width - 1);
+  const stepY = SIZE / (heightCells - 1);
+  for (let y = 0; y < heightCells; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const wx = x * stepX - SIZE / 2;
+      const wz = y * stepY - SIZE / 2;
+      const wy = sampleHeight(height, x, y) * scaleY + 0.15;
+      positions.setXYZ(idx, wx, wy, wz);
+      const value = plan.field.data[idx] / maxValue;
+      color.setHSL(0.55 - value * 0.4, 0.85, 0.45 + value * 0.3);
+      colors[colorIndex++] = color.r;
+      colors[colorIndex++] = color.g;
+      colors[colorIndex++] = color.b;
+    }
+  }
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  const material = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.4,
+    depthWrite: false
+  });
+  return new THREE.Mesh(geometry, material);
+}
+
+function buildPhysarumLines(
+  plan: PhysarumPlan,
+  height: Float32Array[],
+  scaleY: number,
+  color: number,
+  opacity: number
+) {
+  const positions: number[] = [];
+  for (const edge of plan.graph.edges) {
+    if (edge.points.length < 2) continue;
+    for (let i = 1; i < edge.points.length; i++) {
+      const a = edge.points[i - 1];
+      const b = edge.points[i];
+      const ax = a.x - SIZE / 2;
+      const ay = sampleHeight(height, a.x, a.y) * scaleY + 0.2;
+      const az = a.y - SIZE / 2;
+      const bx = b.x - SIZE / 2;
+      const by = sampleHeight(height, b.x, b.y) * scaleY + 0.2;
+      const bz = b.y - SIZE / 2;
+      positions.push(ax, ay, az, bx, by, bz);
+    }
+  }
+  if (!positions.length) return null;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  const material = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    depthWrite: false
+  });
+  return new THREE.LineSegments(geometry, material);
+}
+
+function buildPhysarumRoadGroup(plan: PhysarumPlan, height: Float32Array[], scaleY: number) {
+  return buildPhysarumLines(plan, height, scaleY, 0xf6cf7b, 0.8);
 }
 
 const billboardEmotes = ["🧟", "🧫", "⚡", "👻", "🏕️", "🚧", "💧", "💡", "🛡️", "🧰", "📦", "🏚️"];
@@ -132,12 +211,35 @@ export default function World3DMap() {
     openRegion: (detail: RegionDetail) => void;
   } | null>(null);
 
-  const { worldSeed, elevScale, showRivers, showSprites, showRoads, openRegion } = useGameStore((state) => ({
+  const {
+    worldSeed,
+    elevScale,
+    showRivers,
+    showSprites,
+    showRoads,
+    enablePhysarumWorld,
+    physarumWorldPlan,
+    showPhysarumConductance,
+    showPhysarumSkeleton,
+    showPhysarumRoads,
+    physarumParams,
+    runPhysarumWorld,
+    clearPhysarumWorld,
+    openRegion
+  } = useGameStore((state) => ({
     worldSeed: state.worldSeed,
     elevScale: state.elevScale,
     showRivers: state.showRivers,
     showSprites: state.showSprites,
     showRoads: state.showRoads,
+    enablePhysarumWorld: state.enablePhysarumWorld,
+    physarumWorldPlan: state.physarumWorldPlan,
+    showPhysarumConductance: state.showPhysarumConductance,
+    showPhysarumSkeleton: state.showPhysarumSkeleton,
+    showPhysarumRoads: state.showPhysarumRoads,
+    physarumParams: state.physarumParams,
+    runPhysarumWorld: state.runPhysarumWorld,
+    clearPhysarumWorld: state.clearPhysarumWorld,
     openRegion: state.openRegion
   }));
 
@@ -171,6 +273,64 @@ export default function World3DMap() {
     return extras.slice(0, Math.floor(roadsMain.length * 0.6));
   }, [knnEdges, roadsMain, seeds]);
 
+  const physarumRoadEdges = useMemo(() => {
+    if (!enablePhysarumWorld || !physarumWorldPlan) return null;
+    const toSeedIndex = (point: { x: number; y: number }) => {
+      let bestIndex = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < seeds.length; i++) {
+        const dx = seeds[i].x - point.x;
+        const dy = seeds[i].y - point.y;
+        const dist = dx * dx + dy * dy;
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIndex = i;
+        }
+      }
+      return bestIndex;
+    };
+    const edges: [number, number][] = [];
+    const seen = new Set<string>();
+    for (const edge of physarumWorldPlan.graph.edges) {
+      const start = edge.points[0];
+      const end = edge.points[edge.points.length - 1];
+      const a = toSeedIndex(start);
+      const b = toSeedIndex(end);
+      if (a === b) continue;
+      const key = `${Math.min(a, b)}-${Math.max(a, b)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push([a, b]);
+    }
+    return edges.length ? edges : null;
+  }, [enablePhysarumWorld, physarumWorldPlan, seeds]);
+
+  const roadsMainDisplay = useMemo(() => {
+    if (!physarumRoadEdges) return roadsMain;
+    const base = new Set(physarumRoadEdges.map(([a, b]) => `${Math.min(a, b)}-${Math.max(a, b)}`));
+    const combined = [...physarumRoadEdges];
+    for (const edge of roadsMain) {
+      const key = `${Math.min(edge[0], edge[1])}-${Math.max(edge[0], edge[1])}`;
+      if (!base.has(key)) combined.push(edge);
+    }
+    return combined;
+  }, [physarumRoadEdges, roadsMain]);
+
+  useEffect(() => {
+    if (!enablePhysarumWorld) {
+      clearPhysarumWorld();
+      return;
+    }
+    runPhysarumWorld({ height, seeds });
+  }, [
+    enablePhysarumWorld,
+    height,
+    seeds,
+    physarumParams,
+    runPhysarumWorld,
+    clearPhysarumWorld
+  ]);
+
   useEffect(() => {
     selectionRef.current = {
       height,
@@ -181,8 +341,8 @@ export default function World3DMap() {
   }, [height, seeds, worldSeed, openRegion]);
 
   useEffect(() => {
-    runSanityTests(height, rivers, sprites, roadsMain, seeds, roadsSide);
-  }, [height, rivers, sprites, roadsMain, roadsSide, seeds]);
+    runSanityTests(height, rivers, sprites, roadsMainDisplay, seeds, roadsSide);
+  }, [height, rivers, sprites, roadsMainDisplay, roadsSide, seeds]);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -350,10 +510,25 @@ export default function World3DMap() {
     if (showRivers) worldGroup.add(buildRiversGroup(rivers, height, elevScale));
 
     if (showRoads) {
-      const gMain = buildRoadsGroup(seeds, roadsMain, height, elevScale, 0.9, 0xd2c099);
+      const gMain = buildRoadsGroup(seeds, roadsMainDisplay, height, elevScale, 0.9, 0xd2c099);
       const gSide = buildRoadsGroup(seeds, roadsSide, height, elevScale, 0.6, 0x9aa7b8);
       worldGroup.add(gMain);
       worldGroup.add(gSide);
+    }
+
+    if (enablePhysarumWorld && physarumWorldPlan) {
+      if (showPhysarumConductance) {
+        const mesh = buildConductanceOverlay(physarumWorldPlan, height, elevScale);
+        if (mesh) worldGroup.add(mesh);
+      }
+      if (showPhysarumSkeleton) {
+        const lines = buildPhysarumLines(physarumWorldPlan, height, elevScale, 0x8ce0ff, 0.5);
+        if (lines) worldGroup.add(lines);
+      }
+      if (showPhysarumRoads) {
+        const roadsGroup = buildPhysarumRoadGroup(physarumWorldPlan, height, elevScale);
+        if (roadsGroup) worldGroup.add(roadsGroup);
+      }
     }
 
     if (showSprites) worldGroup.add(buildSpritesGroup(sprites, height, elevScale));
@@ -366,10 +541,27 @@ export default function World3DMap() {
       showSprites,
       showRoads,
       children: worldGroup.children.length,
-      roadsMain: roadsMain.length,
+      roadsMain: roadsMainDisplay.length,
       roadsSide: roadsSide.length
     });
-  }, [height, elevScale, showRivers, showSprites, showRoads, rivers, sprites, worldSeed, roadsMain, roadsSide, seeds]);
+  }, [
+    height,
+    elevScale,
+    showRivers,
+    showSprites,
+    showRoads,
+    rivers,
+    sprites,
+    worldSeed,
+    roadsMainDisplay,
+    roadsSide,
+    seeds,
+    enablePhysarumWorld,
+    physarumWorldPlan,
+    showPhysarumConductance,
+    showPhysarumSkeleton,
+    showPhysarumRoads
+  ]);
 
   return <div ref={mountRef} style={{ width: "100%", height: "100%" }} />;
 }
