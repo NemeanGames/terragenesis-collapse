@@ -5,6 +5,9 @@ import { FACILITIES, type FacilityId, facilityById } from "../features/facilitie
 import { PROJECT_LIBRARY } from "../features/facilities/projects";
 import { INITIAL_SURVIVORS } from "../features/survivors/data";
 import type {
+  CellOpenArgs,
+  CellRuntime,
+  CellSnapshot,
   EnvironmentState,
   EnvironmentTargets,
   GameEvent,
@@ -16,9 +19,11 @@ import type {
   ResourceKey,
   ResourceMap,
   Survivor,
-  SurvivorRole
+  SurvivorRole,
+  TerrainTileMeta
 } from "./types";
 import type { TickComputation } from "../simulation/tick";
+import { generateCellFromMacro } from "../cell/generateCell";
 
 const STORAGE_KEY = "tg-collapse-save";
 
@@ -68,10 +73,13 @@ export interface GameStoreState {
   showRoads: boolean;
   mapView: MapView;
   selectedRegion: RegionDetail | null;
+  selectedCell: CellSnapshot | null;
+  cellRuntime: CellRuntime | null;
   zombieSurvivors: number;
   zombieFood: number;
   zombieWater: number;
   zombieHostility: number;
+  tileMetaByKey: Record<string, TerrainTileMeta>;
   applyTick: (result: TickComputation) => void;
   queueEvent: (event: GameEvent) => void;
   assignSurvivor: (id: string, role: SurvivorRole) => void;
@@ -94,6 +102,10 @@ export interface GameStoreState {
   openRegion: (detail: RegionDetail) => void;
   closeRegion: () => void;
   updateRegionPoiStatus: (poiId: string, status: RegionPoiStatus) => void;
+  openCell: (args: CellOpenArgs) => void;
+  closeCell: () => void;
+  toggleCellOverlay: (key: keyof CellSnapshot["overlays"]) => void;
+  setTileMeta: (q: number, r: number, meta: TerrainTileMeta) => void;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -125,6 +137,8 @@ function serialize(state: GameStoreState) {
     showRoads: state.showRoads,
     mapView: state.mapView,
     selectedRegion: state.selectedRegion,
+    selectedCell: state.selectedCell,
+    tileMetaByKey: state.tileMetaByKey,
     zombieSurvivors: state.zombieSurvivors,
     zombieFood: state.zombieFood,
     zombieWater: state.zombieWater,
@@ -166,10 +180,13 @@ export const useGameStore = create<GameStoreState>()(
     showRoads: true,
     mapView: "terra" as MapView,
     selectedRegion: null,
+    selectedCell: null,
+    cellRuntime: null,
     zombieSurvivors: 24,
     zombieFood: 120,
     zombieWater: 90,
     zombieHostility: 32,
+    tileMetaByKey: {},
     applyTick: (result) => {
       set((state) => {
         const resources = cloneResources(state.resources);
@@ -278,11 +295,28 @@ export const useGameStore = create<GameStoreState>()(
       if (!raw) return;
       const data = deserialize(raw);
       if (!data) return;
+
       set((state) => ({
         ...state,
         ...data,
-        events: data.events ?? state.events
+        events: data.events ?? state.events,
+        selectedCell: data.selectedCell ?? null,
+        cellRuntime: null,
+        tileMetaByKey: data.tileMetaByKey ?? state.tileMetaByKey
       }));
+
+      if (data.selectedCell) {
+        const key = `${data.selectedCell.q},${data.selectedCell.r}`;
+        const meta = data.tileMetaByKey?.[key];
+        if (meta) {
+          const runtime = generateCellFromMacro(data.selectedCell.seed, meta);
+          set({
+            selectedCell: { ...data.selectedCell, buildablePct: runtime.stats.buildablePct },
+            cellRuntime: runtime,
+            mapView: data.mapView === "cell" ? "cell" : data.mapView ?? ("terra" as MapView)
+          });
+        }
+      }
     },
     saveToStorage: () => {
       const state = get();
@@ -347,26 +381,42 @@ export const useGameStore = create<GameStoreState>()(
     setZombieHostility: (value) => set({ zombieHostility: clamp(value, 0, 100) }),
     toggleZombieWorld: () =>
       set((state) => {
-        const next = state.mapView === "zombie" ? "terra" : "zombie";
+        const next = state.mapView === "zombie" ? ("terra" as MapView) : ("zombie" as MapView);
         return {
           mapView: next,
-          selectedRegion: next === "zombie" ? null : state.selectedRegion
+          selectedRegion: next === "zombie" ? null : state.selectedRegion,
+          selectedCell: next === "zombie" ? null : state.selectedCell,
+          cellRuntime: next === "zombie" ? null : state.cellRuntime
         };
       }),
     setMapView: (view) =>
       set((state) => {
         if (view === state.mapView) return state;
         if (view === "zombie") {
-          return { mapView: "zombie" as MapView, selectedRegion: null };
+          return {
+            mapView: "zombie" as MapView,
+            selectedRegion: null,
+            selectedCell: null,
+            cellRuntime: null
+          };
         }
         if (view === "terra") {
-          return { mapView: "terra" as MapView };
+          return {
+            mapView: "terra" as MapView,
+            selectedCell: null,
+            cellRuntime: null
+          };
+        }
+        if (view === "cell") {
+          return state.selectedCell ? { mapView: "cell" as MapView } : state;
         }
         return { mapView: view };
       }),
     openRegion: (detail) =>
-      set(() => ({
+      set((state) => ({
         selectedRegion: detail,
+        selectedCell: null,
+        cellRuntime: null,
         mapView: "urban" as MapView
       })),
     closeRegion: () =>
@@ -382,6 +432,56 @@ export const useGameStore = create<GameStoreState>()(
         );
         return {
           selectedRegion: { ...state.selectedRegion, pois }
+        };
+      }),
+    openCell: (args) =>
+      set((state) => {
+        const prev = state.selectedCell;
+        const overlays =
+          prev && prev.q === args.q && prev.r === args.r
+            ? prev.overlays
+            : { roads: true, lots: true, poi: true, heat: false };
+        const snapshot: CellSnapshot = {
+          id: `cell:${args.q},${args.r}`,
+          q: args.q,
+          r: args.r,
+          seed: args.seed,
+          buildablePct: 0,
+          overlays
+        };
+        const runtime = generateCellFromMacro(args.seed, args.tile);
+        snapshot.buildablePct = runtime.stats.buildablePct;
+        return {
+          selectedCell: snapshot,
+          cellRuntime: runtime,
+          mapView: "cell" as MapView
+        };
+      }),
+    closeCell: () =>
+      set({
+        selectedCell: null,
+        cellRuntime: null,
+        mapView: "terra" as MapView
+      }),
+    toggleCellOverlay: (key) =>
+      set((state) => {
+        if (!state.selectedCell) return {} as Partial<GameStoreState>;
+        const overlays = {
+          ...state.selectedCell.overlays,
+          [key]: !state.selectedCell.overlays[key]
+        };
+        return {
+          selectedCell: { ...state.selectedCell, overlays }
+        };
+      }),
+    setTileMeta: (q, r, meta) =>
+      set((state) => {
+        const key = `${q},${r}`;
+        return {
+          tileMetaByKey: {
+            ...state.tileMetaByKey,
+            [key]: meta
+          }
         };
       })
   }))

@@ -16,6 +16,7 @@ objective is to restore multiple regions and rebuild civilization.
 - Hostility meter representing the increasing threat of zombie hordes.
 - Reactive events and narrative radio messages to enrich the storyline.
 - Multi‑zone meta‑progression: reclaimed zones grant permanent bonuses.
+- Micro cell drill-down: double-click a gentle land tile to open a 48×48 buildable grid with road and lot overlays.
 
 ## Getting Started
 
@@ -60,6 +61,9 @@ npm run preview
 - **3D Map** – The Three.js world provides a terrain backdrop with toggles for
   rivers, roads and landmarks. Adjust the procedural seed or elevation scale in
   the Actions panel.
+- **Cell View** – Eligible tiles (land with slope ≤ 0.35) open a micro cell with
+  buildable mask, roads and procedural lots. Toggle overlays to focus on roads,
+  lots or POI beacons, and exit back to the world via the header button.
 
 ## Deployment to GitHub Pages
 
