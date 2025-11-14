@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "lint": "eslint .",
-    "check:pages": "node scripts/checkPages.mjs"
+    "check:pages": "node scripts/checkPages.mjs",
+    "bench:warp4d": "vite-node scripts/benchWarp4d.ts"
   },
   "dependencies": {
     "murmurhash-js": "^1.0.0",
