@@ -17,6 +17,8 @@ objective is to restore multiple regions and rebuild civilization.
 - Reactive events and narrative radio messages to enrich the storyline.
 - Multi‑zone meta‑progression: reclaimed zones grant permanent bonuses.
 - Urban cell overlays with block flood fill, frontage lots and zoning toggles.
+- Physarum-inspired road planner with conductance heatmaps, skeleton overlays,
+  and feature-flagged world/cell integration.
 
 ## Getting Started
 
@@ -83,6 +85,10 @@ npm run preview
 - **3D Map** – The Three.js world provides a terrain backdrop with toggles for
   rivers, roads and landmarks. Adjust the procedural seed or elevation scale in
   the Actions panel.
+- **Physarum Planner** – Enable the world planner under *Actions → Physarum*
+  to run an agent-based trail solver on the terrain cost field. Optional
+  overlays visualise conductance, the thinned skeleton, and the merged road
+  polylines.
 
 ## Deployment to GitHub Pages
 
