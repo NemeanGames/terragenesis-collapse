@@ -16,6 +16,7 @@ objective is to restore multiple regions and rebuild civilization.
 - Hostility meter representing the increasing threat of zombie hordes.
 - Reactive events and narrative radio messages to enrich the storyline.
 - Multi‑zone meta‑progression: reclaimed zones grant permanent bonuses.
+- Urban cell overlays with block flood fill, frontage lots and zoning toggles.
 
 ## Getting Started
 
@@ -57,6 +58,10 @@ npm run preview
 - **Events** – Random radio transmissions grant bonuses or apply pressure (e.g.
   oxygen leaks, horde scouts). Completed projects and construction also surface
   log entries.
+- **Urban Cell Planner** – Switch to an operations region to open the cell view.
+  Use the Blocks/Lots/Zoning toggle to visualise flood-filled blocks, frontage
+  lots and the first-pass zoning mix by density band. The legend and metrics
+  panel track proportions and flag imbalances against the configured bands.
 - **3D Map** – The Three.js world provides a terrain backdrop with toggles for
   rivers, roads and landmarks. Adjust the procedural seed or elevation scale in
   the Actions panel.
