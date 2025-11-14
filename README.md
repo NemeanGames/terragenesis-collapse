@@ -38,6 +38,24 @@ Vitest is configured for unit tests.
 npm run test -- --run
 ```
 
+### Terrain sampler configuration
+
+The warp4d terrain sampler introduced in this iteration exposes the following
+parameters for downstream passes:
+
+| Parameter | Description |
+| --- | --- |
+| `baseFrequency` | Fundamental frequency for the base fBm layer. |
+| `octaves` | Number of fractal octaves evaluated per sample. |
+| `lacunarity` | Frequency multiplier applied between successive octaves. |
+| `gain` | Amplitude multiplier applied between successive octaves. |
+| `warpAmplitude` | Strength of the domain warp offset applied in 4D space. |
+| `warpFrequency` | Frequency used for the domain warp noise fields. |
+| `seed` | Stable seed string/number producing deterministic outputs. |
+
+Benchmarks for the sampler can be triggered with `npm run bench:warp4d` to
+inspect the runtime cost of producing 100k height and moisture samples.
+
 ### Production Build
 
 ```bash
