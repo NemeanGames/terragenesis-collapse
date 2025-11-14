@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import World3DMap from "./components/World3DMap";
+import CellView from "./components/CellView";
 import { useGameStore } from "./state/gameState";
 import { useSimulation } from "./simulation/useSimulation";
 import StatsPanel from "./components/StatsPanel";
@@ -12,14 +13,23 @@ import VersionBadge from "./components/VersionBadge";
 import type { MapView } from "./state/types";
 
 function App() {
-  const { initializeFromStorage, mapView, setMapView, closeRegion, selectedRegion } =
-    useGameStore((state) => ({
-      initializeFromStorage: state.initializeFromStorage,
-      mapView: state.mapView,
-      setMapView: state.setMapView,
-      closeRegion: state.closeRegion,
-      selectedRegion: state.selectedRegion
-    }));
+  const {
+    initializeFromStorage,
+    mapView,
+    setMapView,
+    closeRegion,
+    closeCell,
+    selectedRegion,
+    selectedCell
+  } = useGameStore((state) => ({
+    initializeFromStorage: state.initializeFromStorage,
+    mapView: state.mapView,
+    setMapView: state.setMapView,
+    closeRegion: state.closeRegion,
+    closeCell: state.closeCell,
+    selectedRegion: state.selectedRegion,
+    selectedCell: state.selectedCell
+  }));
   useEffect(() => {
     initializeFromStorage();
   }, [initializeFromStorage]);
@@ -27,13 +37,39 @@ function App() {
   useSimulation();
 
   const isUrban = mapView === "urban";
+  const isCell = mapView === "cell";
 
   const handleSelectView = (view: MapView) => {
-    if (view === "urban") return;
-    if (mapView === "urban" && view === "terra") {
-      closeRegion();
+    if (view === "terra") {
+      if (mapView === "urban") {
+        closeRegion();
+        return;
+      }
+      if (mapView === "cell") {
+        closeCell();
+        return;
+      }
+      setMapView("terra");
       return;
     }
+
+    if (view === "urban") {
+      if (mapView === "cell") {
+        closeCell();
+      }
+      if (selectedRegion) {
+        setMapView("urban");
+      }
+      return;
+    }
+
+    if (view === "cell") {
+      if (selectedCell) {
+        setMapView("cell");
+      }
+      return;
+    }
+
     setMapView(view);
   };
 
@@ -85,6 +121,22 @@ function App() {
               ← Back to World
             </button>
           )}
+          {isCell && (
+            <button
+              onClick={closeCell}
+              style={{
+                borderRadius: "9999px",
+                border: "1px solid rgba(132,176,255,0.45)",
+                background: "rgba(24,36,64,0.65)",
+                padding: "6px 16px",
+                color: "#c9dbff",
+                fontSize: "0.85rem",
+                fontWeight: 500
+              }}
+            >
+              ← Back to World
+            </button>
+          )}
           <ModeToggle mapView={mapView} onSelect={handleSelectView} />
           <SaveIndicator />
         </div>
@@ -107,6 +159,7 @@ function App() {
       >
         {mapView === "zombie" && <ZombieWorldGame />}
         {mapView === "terra" && <World3DMap />}
+        {mapView === "cell" && <CellView />}
         {mapView === "urban" && (
           <UrbanOperationsView
             key={selectedRegion?.axial ? `${selectedRegion.axial.q},${selectedRegion.axial.r}` : "urban"}
@@ -160,6 +213,9 @@ function SaveIndicator() {
 
 function ModeToggle({ mapView, onSelect }: { mapView: MapView; onSelect: (view: MapView) => void }) {
   const isZombie = mapView === "zombie";
+  const isUrban = mapView === "urban";
+  const isCell = mapView === "cell";
+
   return (
     <div
       style={{
@@ -175,32 +231,32 @@ function ModeToggle({ mapView, onSelect }: { mapView: MapView; onSelect: (view: 
         style={{
           padding: "6px 16px",
           border: "none",
-          background: !isZombie && mapView !== "urban" ? "rgba(46,80,140,0.65)" : "transparent",
+          background:
+            !isZombie && !isUrban && !isCell ? "rgba(46,80,140,0.65)" : "transparent",
           color: "#9cc9ff",
           fontSize: "0.85rem",
           cursor: "pointer",
-          fontWeight: !isZombie && mapView !== "urban" ? 600 : 500
+          fontWeight: !isZombie && !isUrban && !isCell ? 600 : 500
         }}
       >
-     
+        World
       </button>
-      <
-   
-            <button
-      onClick={() => onSelect("urban")}
-      style={{
-        padding: "6px 16px",
-        border: "none",
-        background: mapView === "urban" ? "rgba(60,130,80,0.5)" : "transparent",
-        color: "#90c47a",
-        fontSize: "0.85rem",
-        cursor: "pointer",
-        fontWeight: mapView === "urban" ? 600 : 500
-      }}
-    >
-      Urban
-    </button>
-onClick={() => onSelect("zombie")}
+      <button
+        onClick={() => onSelect("urban")}
+        style={{
+          padding: "6px 16px",
+          border: "none",
+          background: isUrban ? "rgba(60,130,80,0.5)" : "transparent",
+          color: "#90c47a",
+          fontSize: "0.85rem",
+          cursor: "pointer",
+          fontWeight: isUrban ? 600 : 500
+        }}
+      >
+        Urban
+      </button>
+      <button
+        onClick={() => onSelect("zombie")}
         style={{
           padding: "6px 16px",
           border: "none",

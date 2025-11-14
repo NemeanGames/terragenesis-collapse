@@ -64,7 +64,7 @@ export interface GameSnapshot {
 
 export type Axial = { q: number; r: number };
 
-export type MapView = "terra" | "urban" | "zombie";
+export type MapView = "terra" | "urban" | "zombie" | "cell";
 
 export type RegionCategory = "wilderness" | "rural" | "urbanCore" | "urbanDistrict";
 
@@ -79,6 +79,17 @@ export interface RegionPoi {
   difficulty: number;
   status: RegionPoiStatus;
   description?: string;
+}
+
+export interface TerrainTileMeta {
+  height: number;
+  slope: number;
+  moisture: number;
+  biomeId: number;
+  waterMask: number;
+  coastFlag: boolean;
+  densityBand?: number;
+  roadAnchors?: Array<[number, number]>;
 }
 
 export interface RegionDetail {
@@ -96,4 +107,46 @@ export interface RegionDetail {
   };
   gates: RegionGate[];
   pois: RegionPoi[];
+  tileMeta?: TerrainTileMeta;
+}
+
+export interface CellOpenArgs {
+  q: number;
+  r: number;
+  seed: number;
+  tile: TerrainTileMeta;
+  regionId?: string;
+}
+
+export interface CellSnapshot {
+  id: string;
+  q: number;
+  r: number;
+  seed: number;
+  buildablePct: number;
+  overlays: {
+    roads: boolean;
+    lots: boolean;
+    poi: boolean;
+    heat: boolean;
+  };
+}
+
+export interface CellRuntime {
+  lots: Array<{
+    id: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    zone: "res" | "mix" | "com";
+    poi?: string;
+  }>;
+  roads: Array<{
+    id: string;
+    path: [number, number][];
+    degree: number;
+  }>;
+  anchors: Array<[number, number]>;
+  stats: { buildablePct: number };
 }

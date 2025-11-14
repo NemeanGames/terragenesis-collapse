@@ -17,7 +17,7 @@ import { buildKnnEdges, mstKruskal, buildRoadsGroup } from "../world/terrain/roa
 import { analyzeRegion } from "../world/terrain/regions";
 import { worldToAxial, hashAxial } from "../world/hex";
 import { generateRegionPois, deriveRegionGates } from "../world/regions/poi";
-import type { RegionDetail, RegionCategory } from "../state/types";
+import type { CellOpenArgs, RegionDetail, RegionCategory, TerrainTileMeta } from "../state/types";
 
 const SEEDS = 160;
 const MIN_DIST = 24;
@@ -130,15 +130,28 @@ export default function World3DMap() {
     seeds: { x: number; y: number }[];
     worldSeed: number;
     openRegion: (detail: RegionDetail) => void;
+    openCell: (args: CellOpenArgs) => void;
+    setTileMeta: (q: number, r: number, meta: TerrainTileMeta) => void;
   } | null>(null);
 
-  const { worldSeed, elevScale, showRivers, showSprites, showRoads, openRegion } = useGameStore((state) => ({
+  const {
+    worldSeed,
+    elevScale,
+    showRivers,
+    showSprites,
+    showRoads,
+    openRegion,
+    openCell,
+    setTileMeta
+  } = useGameStore((state) => ({
     worldSeed: state.worldSeed,
     elevScale: state.elevScale,
     showRivers: state.showRivers,
     showSprites: state.showSprites,
     showRoads: state.showRoads,
-    openRegion: state.openRegion
+    openRegion: state.openRegion,
+    openCell: state.openCell,
+    setTileMeta: state.setTileMeta
   }));
 
   const rng = useMemo(() => makeRng(worldSeed >>> 0), [worldSeed]);
@@ -176,9 +189,11 @@ export default function World3DMap() {
       height,
       seeds,
       worldSeed,
-      openRegion
+      openRegion,
+      openCell,
+      setTileMeta
     };
-  }, [height, seeds, worldSeed, openRegion]);
+  }, [height, seeds, worldSeed, openRegion, openCell, setTileMeta]);
 
   useEffect(() => {
     runSanityTests(height, rivers, sprites, roadsMain, seeds, roadsSide);
@@ -273,6 +288,8 @@ export default function World3DMap() {
       const seed = (axialHash ^ (context.worldSeed >>> 0)) >>> 0;
       const pois = generateRegionPois(seed, analysis.category, axialHash);
       const gates = deriveRegionGates(analysis.category, hit.x, hit.z, SIZE);
+      const meta = deriveTileMeta(analysis, axial, context.height, hit.x, hit.z);
+      context.setTileMeta(axial.q, axial.r, meta);
       const detail: RegionDetail = {
         axial,
         category: analysis.category,
@@ -281,8 +298,23 @@ export default function World3DMap() {
         label: `${formatRegionCategory(analysis.category)} (${axial.q},${axial.r})`,
         metrics: analysis.metrics,
         gates,
-        pois
+        pois,
+        tileMeta: meta
       };
+      const openArgs: CellOpenArgs = {
+        q: axial.q,
+        r: axial.r,
+        seed: hash3(context.worldSeed >>> 0, axial.q, axial.r),
+        tile: meta,
+        regionId: detail.label
+      };
+
+      if (meta.waterMask === 0 && analysis.metrics.slope <= 0.35) {
+        context.openRegion(detail);
+        context.openCell(openArgs);
+        return;
+      }
+
       context.openRegion(detail);
     };
     canvas.addEventListener("pointerdown", onDown);
@@ -386,4 +418,83 @@ function formatRegionCategory(category: RegionCategory) {
     default:
       return "Wilderness";
   }
+}
+
+function deriveTileMeta(
+  analysis: NonNullable<ReturnType<typeof analyzeRegion>>,
+  height: Float32Array[],
+  worldX: number,
+  worldZ: number
+): TerrainTileMeta {
+  const waterMask = computeWaterMask(height, worldX, worldZ);
+  const density = densityFromCategory(analysis.category);
+  return {
+    height: analysis.metrics.elevation,
+    slope: analysis.metrics.slope,
+    moisture: analysis.metrics.moisture,
+    biomeId: biomeForCategory(analysis.category),
+    waterMask,
+    coastFlag: analysis.metrics.coastal,
+    densityBand: density,
+    roadAnchors: undefined
+  };
+}
+
+function densityFromCategory(category: RegionCategory) {
+  switch (category) {
+    case "urbanCore":
+      return 0.9;
+    case "urbanDistrict":
+      return 0.72;
+    case "rural":
+      return 0.48;
+    case "wilderness":
+    default:
+      return 0.28;
+  }
+}
+
+function biomeForCategory(category: RegionCategory) {
+  switch (category) {
+    case "urbanCore":
+      return 4;
+    case "urbanDistrict":
+      return 3;
+    case "rural":
+      return 2;
+    case "wilderness":
+    default:
+      return 1;
+  }
+}
+
+function computeWaterMask(height: Float32Array[], worldX: number, worldZ: number) {
+  const hx = clamp(worldX + SIZE / 2, 0, SIZE - 1);
+  const hz = clamp(worldZ + SIZE / 2, 0, SIZE - 1);
+  const center = sampleHeight(height, hx, hz);
+  if (center <= ELEV_BANDS.WATER + 0.002) return 2;
+  const offsets = [
+    [6, 0],
+    [-6, 0],
+    [0, 6],
+    [0, -6],
+    [8, 8],
+    [-8, 8],
+    [8, -8],
+    [-8, -8]
+  ];
+  for (const [ox, oz] of offsets) {
+    const sx = clamp(hx + ox, 0, SIZE - 1);
+    const sz = clamp(hz + oz, 0, SIZE - 1);
+    if (sampleHeight(height, sx, sz) <= ELEV_BANDS.WATER + 0.002) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+function hash3(a: number, b: number, c: number) {
+  let x = a * 374761393 + b * 668265263 + c * 2147483647;
+  x = (x ^ (x >>> 13)) * 1274126177;
+  return x >>> 0;
 }
