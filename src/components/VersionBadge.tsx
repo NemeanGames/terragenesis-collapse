@@ -1,3 +1,5 @@
+declare const __BUILD_ID__: string;
+
 export default function VersionBadge() {
   return (
     <div style={{ position: "fixed", right: 8, bottom: 8, opacity: 0.6, fontSize: 12 }}>

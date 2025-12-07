@@ -62,15 +62,15 @@ function makeTestCell(): Cell {
     }
   }
 
-  const nodes = [
-    { id: 0, position: [center, 6], tags: [] },
-    { id: 1, position: [center, center], tags: [] },
-    { id: 2, position: [center, bounds - 6], tags: [] },
-    { id: 3, position: [6, center], tags: [] },
-    { id: 4, position: [bounds - 6, center], tags: [] },
-    { id: 5, position: [center, center - 6], tags: [] },
-    { id: 6, position: [center + 10, center], tags: [] }
-  ];
+    const nodes = [
+      { id: 0, position: [center, 6] as [number, number], tags: [] },
+      { id: 1, position: [center, center] as [number, number], tags: [] },
+      { id: 2, position: [center, bounds - 6] as [number, number], tags: [] },
+      { id: 3, position: [6, center] as [number, number], tags: [] },
+      { id: 4, position: [bounds - 6, center] as [number, number], tags: [] },
+      { id: 5, position: [center, center - 6] as [number, number], tags: [] },
+      { id: 6, position: [center + 10, center] as [number, number], tags: [] }
+    ];
 
   const edges = [
     { from: 0, to: 1, tags: ['backbone'] },
