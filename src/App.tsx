@@ -160,6 +160,15 @@ function SaveIndicator() {
 
 function ModeToggle({ mapView, onSelect }: { mapView: MapView; onSelect: (view: MapView) => void }) {
   const isZombie = mapView === "zombie";
+  const isUrban = mapView === "urban";
+  const baseButtonStyle = {
+    padding: "6px 16px",
+    border: "none",
+    background: "transparent",
+    fontSize: "0.85rem",
+    cursor: "pointer"
+  } as const;
+
   return (
     <div
       style={{
@@ -171,43 +180,39 @@ function ModeToggle({ mapView, onSelect }: { mapView: MapView; onSelect: (view: 
       }}
     >
       <button
+        type="button"
         onClick={() => onSelect("terra")}
         style={{
-          padding: "6px 16px",
-          border: "none",
-          background: !isZombie && mapView !== "urban" ? "rgba(46,80,140,0.65)" : "transparent",
+          ...baseButtonStyle,
+          background: mapView === "terra" ? "rgba(46,80,140,0.65)" : "transparent",
           color: "#9cc9ff",
-          fontSize: "0.85rem",
-          cursor: "pointer",
-          fontWeight: !isZombie && mapView !== "urban" ? 600 : 500
+          fontWeight: mapView === "terra" ? 600 : 500
         }}
       >
-     
+        Terra
       </button>
-      <
-   
-            <button
-      onClick={() => onSelect("urban")}
-      style={{
-        padding: "6px 16px",
-        border: "none",
-        background: mapView === "urban" ? "rgba(60,130,80,0.5)" : "transparent",
-        color: "#90c47a",
-        fontSize: "0.85rem",
-        cursor: "pointer",
-        fontWeight: mapView === "urban" ? 600 : 500
-      }}
-    >
-      Urban
-    </button>
-onClick={() => onSelect("zombie")}
+      <button
+        type="button"
+        onClick={() => onSelect("urban")}
+        disabled={!isUrban}
         style={{
-          padding: "6px 16px",
-          border: "none",
+          ...baseButtonStyle,
+          background: isUrban ? "rgba(60,130,80,0.5)" : "transparent",
+          color: "#90c47a",
+          fontWeight: isUrban ? 600 : 500,
+          opacity: isUrban ? 1 : 0.6,
+          cursor: isUrban ? "pointer" : "not-allowed"
+        }}
+      >
+        Urban
+      </button>
+      <button
+        type="button"
+        onClick={() => onSelect("zombie")}
+        style={{
+          ...baseButtonStyle,
           background: isZombie ? "rgba(174,63,102,0.55)" : "transparent",
           color: "#f3a7c6",
-          fontSize: "0.85rem",
-          cursor: "pointer",
           fontWeight: isZombie ? 600 : 500
         }}
       >
