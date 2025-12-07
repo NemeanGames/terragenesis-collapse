@@ -1,7 +1,7 @@
 import { LOT_COLORS } from '../../cell';
 import type { LotKind } from '../../cell';
 
-const ORDER: LotKind[] = ['residential', 'commercial', 'industrial', 'park', 'civic'];
+const ORDER: Exclude<LotKind, 'none'>[] = ['residential', 'commercial', 'industrial', 'park', 'civic'];
 
 export default function CellLegend() {
   return (

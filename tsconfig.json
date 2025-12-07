@@ -10,7 +10,12 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "types": ["vitest", "vite/client", "@testing-library/jest-dom"]
+    "types": ["vitest", "vite/client", "@testing-library/jest-dom"],
+    "baseUrl": ".",
+    "paths": {
+      "three": ["./node_modules/three"],
+      "@react-three/*": ["./node_modules/@react-three/*"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
