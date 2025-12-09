@@ -10,6 +10,7 @@ import {
 import { buildRivers } from "../../world/terrain/rivers";
 import { sampleSeeds } from "../../world/terrain/seeds";
 import { buildKnnEdges } from "../../world/terrain/roads";
+import TurretDefenseLab from "./TurretDefenseLab";
 
 const format = new Intl.NumberFormat();
 
@@ -86,6 +87,7 @@ export default function ZombieWorldGame() {
       style={{
         display: "grid",
         gridTemplateColumns: "320px 1fr",
+        gridTemplateRows: "auto auto",
         gap: "16px",
         height: "100%"
       }}
@@ -174,6 +176,28 @@ export default function ZombieWorldGame() {
           Shared terrain helpers power this slice, so adjustments to the 3D world propagate here
           automatically.
         </p>
+      </section>
+      <section
+        style={{
+          gridColumn: "1 / span 2",
+          padding: "16px",
+          borderRadius: "16px",
+          background: "rgba(6,8,14,0.75)",
+          border: "1px solid rgba(70,100,160,0.35)",
+          display: "grid",
+          gap: "12px"
+        }}
+      >
+        <header style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Turret Gearbase Prototype</h3>
+            <p style={{ margin: "4px 0 0", opacity: 0.75 }}>
+              Sandbox the turret loop without touching the main monolith—loadouts update instantly
+              for fast iteration.
+            </p>
+          </div>
+        </header>
+        <TurretDefenseLab />
       </section>
     </div>
   );

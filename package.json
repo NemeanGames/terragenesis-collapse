@@ -13,11 +13,13 @@
     "bench:warp4d": "vite-node scripts/benchWarp4d.ts"
   },
   "dependencies": {
+    "@react-three/drei": "^9.116.0",
+    "@react-three/fiber": "^8.15.18",
     "murmurhash-js": "^1.0.0",
     "nanoid": "^4.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "three": "^0.161.0",
+    "three": "^0.181.1",
     "zustand": "^4.4.4"
   },
   "devDependencies": {
@@ -26,7 +28,7 @@
     "@testing-library/user-event": "^14.5.1",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
-    "@types/three": "^0.161.0",
+    "@types/three": "^0.181.0",
     "@typescript-eslint/eslint-plugin": "^6.7.2",
     "@typescript-eslint/parser": "^6.7.2",
     "@vitejs/plugin-react": "^4.0.0",
